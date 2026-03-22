@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: Weather API
+  description: >
+    A Spring Boot REST API that returns current weather and forecast data for any city.
+    Responses are cached in Redis for 12 hours to minimise calls to the Visual Crossing
+    weather data provider.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /api/v1/weather/{city}:
+    get:
+      summary: Get weather for a city
+      description: >
+        Returns current conditions and a multi-day forecast for the given city.
+        City names are case-insensitive. Results are served from a Redis cache
+        (TTL 12 hours); a live Visual Crossing request is made only on a cache miss.
+      operationId: getWeather
+      parameters:
+        - name: city
+          in: path
+          required: true
+          description: City name. Must not be blank. Case-insensitive.
+          schema:
+            type: string
+            example: London
+      responses:
+        "200":
+          description: Weather data returned successfully (from cache or live fetch).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherResponse"
+        "400":
+          description: Blank city name or malformed request parameter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid or missing WEATHER_API_KEY.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: City not recognised by the weather data provider.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded — more than 20 requests per minute from this IP.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RateLimitErrorResponse"
+        "500":
+          description: Unexpected internal error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Weather data provider returned a server error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Weather data provider is unreachable (timeout / network failure).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    WeatherResponse:
+      type: object
+      description: Current conditions and multi-day forecast returned by Visual Crossing.
+      properties:
+        resolvedAddress:
+          type: string
+          example: London, England, United Kingdom
+        address:
+          type: string
+          example: London
+        latitude:
+          type: number
+          format: double
+          example: 51.5064
+        longitude:
+          type: number
+          format: double
+          example: -0.12721
+        timezone:
+          type: string
+          example: Europe/London
+        tzoffset:
+          type: number
+          format: double
+          example: 1.0
+        description:
+          type: string
+          example: Partly cloudy throughout the day.
+        currentConditions:
+          type: object
+          description: Conditions at the time the data was fetched.
+          additionalProperties: true
+        days:
+          type: array
+          description: One entry per day in the forecast window.
+          items:
+            type: object
+            additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-03-22T13:45:00.123456Z"
+        status:
+          type: integer
+          example: 404
+        error:
+          type: string
+          example: Not Found
+        message:
+          type: string
+          example: "City not found or invalid request: xyz"
+
+    RateLimitErrorResponse:
+      type: object
+      description: Returned when a client IP exceeds 20 requests per minute.
+      properties:
+        error:
+          type: string
+          example: Too many requests
+        message:
+          type: string
+          example: Rate limit exceeded. Maximum 20 requests per minute.

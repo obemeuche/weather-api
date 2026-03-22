@@ -52,6 +52,13 @@ docker compose up --build
 
 ## API Reference
 
+| Resource | URL |
+|----------|-----|
+| Swagger UI | `http://localhost:8080/swagger-ui.html` |
+| OpenAPI JSON | `http://localhost:8080/v3/api-docs` |
+| OpenAPI YAML | [`openapi.yml`](openapi-spec/openapi.yml) |
+
+
 ### `GET /api/v1/weather/{city}`
 
 Returns current conditions and a multi-day forecast for the given city. City names are case-insensitive.
