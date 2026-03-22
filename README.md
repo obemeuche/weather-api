@@ -50,52 +50,28 @@ export WEATHER_API_KEY=your_api_key_here
 docker compose up --build
 ```
 
-## Usage
+## API Reference
 
-```bash
-# Get weather for a city
-curl http://localhost:8080/api/v1/weather/London
+### `GET /api/v1/weather/{city}`
 
-# City names are case-insensitive (all resolve to the same cache key)
-curl http://localhost:8080/api/v1/weather/london
-curl http://localhost:8080/api/v1/weather/LONDON
-```
+Returns current conditions and a multi-day forecast for the given city. City names are case-insensitive.
 
-### Example response
+| Parameter | Type   | Required | Description           |
+|-----------|--------|----------|-----------------------|
+| `city`    | string | Yes      | City name (path variable, must not be blank) |
 
-```json
-{
-  "resolvedAddress": "London, England, United Kingdom",
-  "timezone": "Europe/London",
-  "description": "Partly cloudy throughout the day.",
-  "currentConditions": {
-    "temp": 14.2,
-    "conditions": "Partially cloudy",
-    "humidity": 72.0
-  },
-  "days": [...]
-}
-```
+### Response codes
 
-### Error responses
-
-All errors return a consistent shape:
-
-```json
-{
-  "timestamp": "2026-03-22T10:00:00Z",
-  "status": 404,
-  "error": "Not Found",
-  "message": "City not found or invalid request: xyz"
-}
-```
-
-| Status | Meaning                                      |
-|--------|----------------------------------------------|
-| 400    | Blank city name or invalid request parameter |
-| 429    | Rate limit exceeded (20 requests/minute/IP)  |
-| 502    | Visual Crossing API returned an error        |
-| 503    | Visual Crossing API is unreachable           |
+| Status | Meaning                                                               |
+|--------|-----------------------------------------------------------------------|
+| `200`  | Success — weather data returned (from cache or live fetch)            |
+| `400`  | Blank city name or malformed request parameter                        |
+| `401`  | Invalid or missing `WEATHER_API_KEY`                                  |
+| `404`  | City not recognised by the weather data provider                      |
+| `429`  | Rate limit exceeded — more than 20 requests per minute from this IP   |
+| `500`  | Unexpected internal error                                             |
+| `502`  | Weather data provider returned a server error                         |
+| `503`  | Weather data provider is unreachable (timeout / network failure)      |
 
 ## Running tests
 
