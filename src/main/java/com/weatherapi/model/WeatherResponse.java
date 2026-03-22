@@ -7,12 +7,6 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * DTO that mirrors the Visual Crossing timeline response.
- *
- * @JsonIgnoreProperties(ignoreUnknown = true) — Visual Crossing returns ~40+ fields.
- * We only map the ones we care about; unknown fields are silently discarded so that
- * future API additions do not break deserialization.
- *
  * Nested structures (days, currentConditions) are Map<String,Object> rather than
  * dedicated POJOs because this service is a passthrough proxy: we cache and return
  * the data without running business logic on its internals. Loose mapping means
