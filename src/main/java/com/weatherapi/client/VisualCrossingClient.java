@@ -52,10 +52,10 @@ public class VisualCrossingClient {
                     .get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/{city}")
-                            .queryParam("unitGroup", "metric")
+                            .queryParam("unitGroup", "uk")
                             .queryParam("key", apiKey)
                             .queryParam("contentType", "json")
-                            .queryParam("include", "current,days")
+                            .queryParam("include", "current")
                             .build(city))
                     .retrieve()
                     // 4xx errors — bad city name, invalid key, malformed request
