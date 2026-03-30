@@ -4,6 +4,8 @@ A Spring Boot REST API that returns current weather and forecast data for any ci
 Responses are cached in Redis for 12 hours to minimise calls to the Visual Crossing
 weather data provider.
 
+Project roadmap.sh url: https://roadmap.sh/projects/weather-api-wrapper-service
+
 ## Architecture
 
 ```
