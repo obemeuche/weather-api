@@ -1,11 +1,31 @@
-version: '3.8'
 services:
   redis:
     image: redis:7-alpine
+    # Bind Redis only to loopback — accessible for local development but not
+    # reachable from outside the host machine. When running the full stack via
+    # docker-compose (both services in the same network) the port mapping is
+    # not used; weather-api connects via the internal "redis" hostname.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
+    command: >
+      sh -c '
+        if [ -n "$$REDIS_PASSWORD" ]; then
+          redis-server --requirepass "$$REDIS_PASSWORD"
+        else
+          redis-server
+        fi
+      '
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: >
+        sh -c '
+          if [ -n "$$REDIS_PASSWORD" ]; then
+            redis-cli -a "$$REDIS_PASSWORD" ping
+          else
+            redis-cli ping
+          fi
+        '
       interval: 5s
       timeout: 3s
       retries: 5
@@ -13,10 +33,11 @@ services:
   weather-api:
     build: .
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - WEATHER_API_KEY=${WEATHER_API_KEY}
     depends_on:
       redis:

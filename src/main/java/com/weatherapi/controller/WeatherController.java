@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -29,6 +31,13 @@ import java.util.Map;
  *   - LettuceBasedProxyManager.builder().build() atomically retrieves or creates
  *     the bucket for a given key; no local map or ApplicationContext needed
  *   - The controller is fully stateless and safe to scale horizontally
+ *
+ * X-Forwarded-For trust policy:
+ *   - The header is only honoured when the direct TCP connection comes from an
+ *     IP listed in server.trusted-proxies (e.g. a known load balancer).
+ *   - If trusted-proxies is empty (the default) the header is ignored and the
+ *     real remote address is always used. This prevents clients from spoofing
+ *     their IP to bypass rate limiting.
  */
 @Slf4j
 @Validated
@@ -40,6 +49,10 @@ public class WeatherController {
     private final WeatherService weatherService;
     private final LettuceBasedProxyManager<String> rateLimitProxyManager;
     private final BucketConfiguration rateLimitConfiguration;
+
+    /** Comma-separated list of trusted proxy IPs (e.g. your load balancer). Empty = trust nobody. */
+    @Value("${app.trusted-proxies:}")
+    private String trustedProxiesConfig;
 
     /**
      * GET /api/v1/weather/{city}
@@ -76,14 +89,29 @@ public class WeatherController {
     }
 
     /**
-     * Resolves the real client IP, honouring X-Forwarded-For when behind a proxy/load balancer.
-     * Falls back to the direct remote address if the header is absent.
+     * Resolves the real client IP.
+     *
+     * X-Forwarded-For is only trusted when the direct TCP connection originates
+     * from an IP in server.trusted-proxies. Trusting the header unconditionally
+     * lets any client spoof their IP and bypass per-IP rate limiting.
      */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        if (isTrustedProxy(remoteAddr)) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                return forwarded.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
+    }
+
+    private boolean isTrustedProxy(String remoteAddr) {
+        if (trustedProxiesConfig == null || trustedProxiesConfig.isBlank()) {
+            return false;
+        }
+        return Arrays.stream(trustedProxiesConfig.split(","))
+                .map(String::trim)
+                .anyMatch(remoteAddr::equals);
     }
 }

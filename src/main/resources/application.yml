@@ -3,6 +3,7 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
 
 weather:
   api:
@@ -13,3 +14,10 @@ weather:
 
 server:
   port: 8080
+
+# Comma-separated IPs of trusted reverse proxies (e.g. your load balancer).
+# X-Forwarded-For is only honoured for requests arriving from these IPs.
+# Leave empty (the default) when running without a proxy — this prevents
+# clients from spoofing their IP to bypass rate limiting.
+app:
+  trusted-proxies: ${TRUSTED_PROXIES:}
