@@ -1,0 +1,6 @@
+#enable ui in dev only
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true
